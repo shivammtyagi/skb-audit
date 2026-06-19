@@ -1,8 +1,21 @@
 import re
 
+def _comment_count(issue):
+    """Normalize the gh `comments` field to an int count.
+
+    gh ≥2.x (`gh issue list --json comments`) returns a list of comment objects;
+    GraphQL-style payloads use {"totalCount": N}; older gh returned a bare int.
+    """
+    c = issue.get("comments", 0)
+    if isinstance(c, list):
+        return len(c)
+    if isinstance(c, dict):
+        return c.get("totalCount", 0) or 0
+    return c or 0
+
 def rank_issue_demand(issues):
-    ranked = sorted(issues, key=lambda i: i.get("comments", 0), reverse=True)
-    return [{"number": i["number"], "title": i["title"], "comments": i.get("comments", 0)}
+    ranked = sorted(issues, key=_comment_count, reverse=True)
+    return [{"number": i["number"], "title": i["title"], "comments": _comment_count(i)}
             for i in ranked]
 
 def parse_changelog(text):
