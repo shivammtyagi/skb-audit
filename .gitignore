@@ -1,0 +1,17 @@
+# Audit output — generated per run, not committed
+audit/
+
+# Your filled-in config (keep team/repo details out of git)
+audit-config.yml
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,6 @@
+= 4.7.0 =
+* Breaking: removed the legacy sitemap filter.
+* Added: new schema graph.
+
+= 4.6.1 =
+* Fixed: deprecated myplugin_old_hook, use myplugin_new_hook instead.

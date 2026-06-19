@@ -1,0 +1,55 @@
+# ── skb-audit configuration ──────────────────────────────────────────────
+# Copy this file to `audit-config.yml` and fill in your own values.
+# `audit-config.yml` is gitignored, so your real team/repo details stay local.
+
+team: Your Team Name                          # shown in the report header
+
+content_source:
+  # Provide EITHER a WordPress export OR a live URL — the skill auto-detects.
+  # (If both are present, the export is used.)
+  wxr_export: ./export.WordPress.xml          # path to a WordPress (WXR) export of your KB
+  live_url:   https://kb.example.com/         # OR the live KB base URL (crawled via Playwright/sitemap)
+  post_types: [resources]                     # the custom post type(s) your KB articles use
+  taxonomies:
+    category: resource_category               # taxonomy that drives type + product routing
+    tag:      resource_tag
+
+# Article-type classification — decides WHICH audit lens applies to each article.
+# Types: product | snippet | operational | training | research
+#   product     → checked for accuracy against code + changelog
+#   snippet     → code/hook names verified to still exist in the mapped repo
+#   operational → internal process docs; never checked against code
+#   training    → videos/tutorials; link-liveness + freshness only
+#   research    → external/market research; link-liveness + freshness only
+article_types:
+  default: operational                        # used when no category rule matches
+  by_category:
+    product:     [Installation, Setup, Configuration, Troubleshooting, Integrations, "Search Settings"]
+    snippet:     ["Code Snippets", Filters, Hooks]
+    training:    ["Training Videos", Tutorials]
+    research:    ["Market Research"]
+    operational: ["Processes and Procedures", "Team Processes", Billing, Accounts, Renewals, Subscriptions]
+  heuristics:
+    snippet_if_code_blocks: true              # article has code + a hook/function name → snippet
+    training_if_video_only: true              # article is mostly a video embed → training
+
+# Multi-product → repo routing (only product/snippet articles are routed to a repo).
+# Matched most-specific-first; the `["*"]` entry is the catch-all; then options.default_repo.
+products:
+  - name: Core Product
+    repo: your-org/your-product               # the GitHub repo that is the source of truth
+    changelog: changelog.txt                  # path to the changelog within that repo (optional)
+    match: { categories: ["*"] }              # catch-all
+  - name: Example Add-on
+    repo: your-org/your-addon
+    match: { categories: ["Add-on Docs"], tags: [addon] }
+
+team_members: [Alice, Bob, Carol]             # options for the CSV "Assigned To" column
+
+options:
+  version_cutoff: null                        # e.g. "4.0" to ignore product changes before this version
+  exclude_categories: [Announcements]         # categories to skip entirely
+  default_repo: your-org/your-product         # fallback repo when no product matches
+  freshness_aging_months: 6                   # > this many months since update → "Aging"
+  freshness_stale_months: 12                  # > this many months → "Stale"
+  dup_threshold: 0.4                          # similarity threshold for duplicate detection (0–1)

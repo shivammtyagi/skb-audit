@@ -1,0 +1,21 @@
+team: TestTeam
+content_source:
+  wxr_export: ./tests/fixtures/sample.wxr.xml
+  post_types: [resources]
+  taxonomies: { category: resource_category, tag: resource_tag }
+article_types:
+  default: operational
+  by_category:
+    product: [Sitemaps]
+    snippet: ["Code Snippets / Filters"]
+    training: ["Training Videos"]
+  heuristics: { snippet_if_code_blocks: true, training_if_video_only: true }
+products:
+  - name: Core
+    repo: example/core
+    match: { categories: ["*"] }
+  - name: Dup
+    repo: example/dup
+    match: { categories: ["Add-on Docs"] }
+team_members: [Alice]
+options: { default_repo: example/core, freshness_aging_months: 6, freshness_stale_months: 12 }
