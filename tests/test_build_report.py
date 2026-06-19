@@ -40,6 +40,29 @@ def test_html_is_self_contained(tmp_path):
     assert "TestTeam" in html
     assert "CRITICAL" in html
 
+def test_markdown_has_spec_sections(tmp_path):
+    from build_report import write_markdown
+    findings = {"articles": [
+        {"title": "Crit One", "url": "u1", "type": "product", "repo": "o/r",
+         "criticality": "CRITICAL", "effort": "Quick Fix", "freshness": "Stale",
+         "support_readiness": "Misleading", "accuracy_finding": "wrong",
+         "evidence": "x.php:1", "action": "fix it", "recommendation": "Update"},
+        {"title": "Fine Doc", "url": "u2", "type": "operational", "criticality": "NONE",
+         "effort": "Quick Fix", "freshness": "Fresh", "support_readiness": "Usable"},
+    ], "backlog": [
+        {"title": "New Doc", "type": "product", "demand": "many", "source": "issue #9",
+         "outline": "o", "priority": "High"}]}
+    p = tmp_path / "report.md"
+    write_markdown(findings, {"team": "T"}, str(p))
+    md = open(p, encoding="utf-8").read()
+    for section in ["# SKB Audit Report — T", "## Executive Summary", "## Quick Wins",
+                    "## Findings", "## Per-Type Breakdown", "## New-Article Backlog",
+                    "## Methodology"]:
+        assert section in md, f"missing section: {section}"
+    assert "By freshness:" in md and "By support-readiness:" in md
+    assert "Crit One" in md and "New Doc" in md         # finding + backlog listed
+    assert "#### Fine Doc" not in md                    # NONE articles not listed individually
+
 def test_backlog_csv(tmp_path):
     from build_report import write_backlog_csv
     findings = {"articles": [], "backlog": [

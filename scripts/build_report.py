@@ -77,28 +77,114 @@ def _counts(findings):
         c[k] = c.get(k, 0) + 1
     return c
 
+def _count_by(findings, key):
+    c = {}
+    for a in findings.get("articles", []):
+        k = a.get(key) or "—"
+        c[k] = c.get(k, 0) + 1
+    return c
+
+def _inline(s):
+    # collapse newlines/whitespace so dynamic text stays on one markdown line
+    return " ".join(str(s or "").split())
+
+def _ordered(counts, order):
+    keys = [k for k in order if k in counts] + [k for k in counts if k not in order]
+    return " · ".join(f"{k} {counts[k]}" for k in keys)
+
 def write_markdown(findings, cfg, path):
+    arts = findings.get("articles", [])
     c = _counts(findings)
-    lines = [f"# SKB Audit Report — {cfg.get('team','')}", "",
-             "## Executive Summary", ""]
-    for sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE"]:
-        lines.append(f"- {sev}: {c.get(sev, 0)}")
-    lines += ["", "## Findings", ""]
-    for a in sorted(findings.get("articles", []), key=sort_key):
-        if a.get("criticality", "NONE") == "NONE":
+    L = [f"# SKB Audit Report — {cfg.get('team','')}", "", f"_{len(arts)} articles audited._", ""]
+
+    # 1) Executive summary — by criticality / type / freshness / readiness
+    L += ["## Executive Summary", ""]
+    L.append("**By criticality:** " + " · ".join(f"{s} {c.get(s,0)}" for s in ["CRITICAL","HIGH","MEDIUM","LOW","NONE"]))
+    L.append("**By type:** " + _ordered(_count_by(findings, "type"), ["product","snippet","operational","training","research"]))
+    L.append("**By freshness:** " + _ordered(_count_by(findings, "freshness"), ["Fresh","Aging","Stale","Unknown"]))
+    L.append("**By support-readiness:** " + _ordered(_count_by(findings, "support_readiness"), ["Resolve-ready","Usable","Thin","Misleading"]))
+    L.append("")
+
+    # 2) Quick Wins — CRITICAL/HIGH that are a Quick Fix
+    L += ["## Quick Wins", "", "_High-impact and fast: CRITICAL/HIGH findings with a Quick Fix effort._", ""]
+    qw = sorted([a for a in arts if a.get("criticality") in ("CRITICAL","HIGH") and a.get("effort") == "Quick Fix"], key=sort_key)
+    if qw:
+        for a in qw:
+            L.append(f"- **[{a.get('criticality')}]** {_inline(a.get('title'))} — {_inline(a.get('action') or a.get('accuracy_finding'))} ([article]({a.get('url','')}))")
+    else:
+        L.append("- _None._")
+    L.append("")
+
+    # 3) Findings grouped by the four priorities (NONE summarized in counts/table, not listed)
+    L += ["## Findings", ""]
+    listed = False
+    for sev in ["CRITICAL","HIGH","MEDIUM","LOW"]:
+        group = sorted([a for a in arts if a.get("criticality") == sev], key=sort_key)
+        if not group:
             continue
-        lines.append(f"### [{a.get('criticality')}] {a.get('title','')}")
-        lines.append(f"- URL: {a.get('url','')}")
-        lines.append(f"- Finding: {a.get('accuracy_finding','')}")
-        lines.append(f"- Evidence: {a.get('evidence','')}")
-        lines.append(f"- Action: {a.get('action','')}")
-        lines.append("")
-    if findings.get("backlog"):
-        lines += ["## New-Article Backlog", ""]
-        for b in findings["backlog"]:
-            lines.append(f"- {b.get('title','')} (demand: {b.get('demand','')}, {b.get('source','')})")
+        listed = True
+        L += [f"### {sev} ({len(group)})", ""]
+        for a in group:
+            L.append(f"#### {_inline(a.get('title'))}")
+            L.append(f"- {a.get('type','')} · {a.get('repo','') or 'no repo'} · effort: {a.get('effort','')} · recommendation: {a.get('recommendation','')}")
+            L.append(f"- URL: {a.get('url','')}")
+            if a.get("accuracy_finding"): L.append(f"- Finding: {_inline(a.get('accuracy_finding'))}")
+            if a.get("evidence"):         L.append(f"- Evidence: {_inline(a.get('evidence'))}")
+            if a.get("known_issue_status"): L.append(f"- Known-issue: {_inline(a.get('known_issue_status'))}")
+            if a.get("action"):           L.append(f"- Action: {_inline(a.get('action'))}")
+            L.append("")
+    if not listed:
+        L += ["_No CRITICAL/HIGH/MEDIUM/LOW findings — all audited articles are accurate and current._", ""]
+
+    # 4) Per-type breakdown
+    bt = _count_by(findings, "type")
+    L += ["## Per-Type Breakdown", "",
+          "| Type | Articles | CRIT | HIGH | MED | LOW | Stale | Thin |",
+          "|---|---:|---:|---:|---:|---:|---:|---:|"]
+    for t in sorted(bt, key=lambda x: -bt[x]):
+        g = [a for a in arts if a.get("type") == t]
+        cc = lambda s: sum(1 for a in g if a.get("criticality") == s)
+        stale = sum(1 for a in g if a.get("freshness") == "Stale")
+        thin = sum(1 for a in g if a.get("support_readiness") == "Thin")
+        L.append(f"| {t} | {len(g)} | {cc('CRITICAL')} | {cc('HIGH')} | {cc('MEDIUM')} | {cc('LOW')} | {stale} | {thin} |")
+    L.append("")
+
+    # 5) Backlog summary (grouped by priority)
+    bl = findings.get("backlog", [])
+    if bl:
+        L += [f"## New-Article Backlog ({len(bl)})", ""]
+        def pri_of(b): return str(b.get("priority", "")).capitalize()
+        for pri in ["High","Medium","Low"]:
+            items = [b for b in bl if pri_of(b) == pri]
+            if not items:
+                continue
+            L += [f"### {pri} priority ({len(items)})", ""]
+            for b in items:
+                L.append(f"- **{_inline(b.get('title'))}** ({b.get('type','')}) — {_inline(b.get('demand'))} _[{_inline(b.get('source'))}]_")
+            L.append("")
+        other = [b for b in bl if pri_of(b) not in ("High","Medium","Low")]
+        if other:
+            L += ["### Other", ""]
+            for b in other:
+                L.append(f"- **{_inline(b.get('title'))}** ({b.get('type','')}) — {_inline(b.get('demand'))} _[{_inline(b.get('source'))}]_")
+            L.append("")
+
+    # 6) Methodology + artifact pointers
+    L += ["## Methodology", "",
+          ("Articles are classified by type; only **product** and **snippet** articles are checked against "
+           "code (operational, training, and research are exempt and judged on quality/freshness only). "
+           "Accuracy findings cite repo evidence (changelog, commits, code) or are flagged for manual review; "
+           "any CRITICAL/HIGH without evidence is downgraded."),
+          "",
+          "**Artifacts**",
+          "- `report/` — this report, the dated per-article CSV (one row per article), and `new-articles-backlog.csv`",
+          "- `_internal/findings.json` — machine-readable findings; `_internal/findings-mechanical.json` — deterministic metrics",
+          "- `_internal/quality-gates.md` — per-phase gate results; `_internal/failures.md` — failures (if any)",
+          "- `_internal/signals/` — per-repo GitHub signals (version, changelog, issue demand)",
+          ""]
+
     with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
+        f.write("\n".join(L) + "\n")
 
 def write_html(findings, cfg, path):
     c = _counts(findings)
