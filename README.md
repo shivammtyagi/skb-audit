@@ -75,6 +75,8 @@ cp audit-config.example.yml audit-config.yml
 
 `audit-config.yml` is gitignored, so your team's details never get committed.
 
+**Prefer not to edit YAML by hand?** Just run `/skb-audit` with no config present — it will ask you for your KB source, post types/taxonomies, product→repo mapping, and team, then write `audit-config.yml` for you and confirm it before starting. It never guesses these from your machine or GitHub; the answers come only from you.
+
 ## Run
 
 In Claude Code, invoke the skill:

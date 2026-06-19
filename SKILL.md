@@ -10,10 +10,30 @@ You audit an internal support knowledge base and produce evidence-backed finding
 strict ordered phases, update `audit/plan.md` before/after each phase, log gate results to
 `audit/_internal/quality-gates.md`, and never fabricate findings.
 
-## Inputs
-Require `audit-config.yml` (copy `audit-config.example.yml`). It declares the content source
-(WXR export or live URL), post types/taxonomies, the article-type map, product→repo map, team
-members, and options. Refuse to start without it.
+## Config — required (build it with the user if missing)
+The audit is driven entirely by `audit-config.yml` (template: `audit-config.example.yml`). It declares
+the content source (WXR export or live URL), post types/taxonomies, the article-type map, the
+product→repo map, team members, and options.
+
+**Your first action — before Setup or any phase — is to check for `audit-config.yml` in the working directory:**
+- **Present** → validate it (`lib/config`), confirm the source is reachable, then proceed.
+- **Missing** → STOP and build it *with the user*. Run the interactive setup in
+  `references/config-setup.md`: ask the user the listed questions, write `audit-config.yml` from their
+  answers, show it to them, get confirmation — then proceed. Asking is the first step, not a fallback.
+
+**Never auto-discover configuration.** A missing config is a question for the user, not a discovery
+task. Do NOT scan the filesystem for a KB or export, enumerate or search GitHub for repos, read git
+history or org membership for team members, crawl a live site, or web-search to "find" the source. The
+only sources of config are an existing `audit-config.yml` or the user's direct answers — access is not
+authorization. (You MAY read a file the user explicitly hands you, e.g. an export path they give, to
+suggest values.)
+
+Red flags — if you catch yourself thinking any of these, STOP and ask the user instead:
+- "There's a WordPress site/export right here — that must be the KB" (proximity ≠ the audit target)
+- "`gh` is authenticated and the repos are right there — I'll infer the product→repo map"
+- "Commit authors / org members are obviously the team" (privacy overreach — never do this)
+- "Phase 1 acquires articles anyway — I'll pre-fetch to get moving"
+- "I have enough signal to write the config myself; the user wants results, not a questionnaire"
 
 ## Setup
 1. `pip install -r requirements.txt`
@@ -21,7 +41,7 @@ members, and options. Refuse to start without it.
 3. Create `audit/`, `audit/_internal/`, `audit/_internal/signals/`, `audit/report/`.
 
 ## Phases (run in order; gate between each — see references/phases.md)
-0. Validate config (`lib/config`). Confirm source reachable.
+0. Preflight: ensure `audit-config.yml` exists — build it *with the user* if missing (see "Config" above; never auto-discover). Validate it (`lib/config`); confirm source reachable.
 1. Acquire → `audit/_internal/articles.json`:
    - if `wxr_export` present: `python scripts/parse_wxr.py --config audit-config.yml --out audit/_internal/articles.json`
    - else live: save rendered pages via Playwright MCP into a dir, then
