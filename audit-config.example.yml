@@ -46,6 +46,17 @@ products:
 
 team_members: [Alice, Bob, Carol]             # options for the CSV "Assigned To" column
 
+# Optional. A throwaway WordPress site you grant FULL wp-admin access to (the audit
+# may log in, install/activate plugins, and change settings). Pass E uses it via the
+# Playwright MCP to screenshot the current product UI and compare it to your KB
+# screenshots. Omit this block to skip live UI comparison (integrity + match-to-steps
+# + code/changelog cue checks still run). The site should run the same AIOSEO version
+# you are auditing. The password is read from an env var, not stored here.
+reference_site:
+  url: https://staging.example.com           # base URL of the reference WP site
+  admin_user: admin                          # wp-admin username
+  admin_pass_env: SKB_REF_WP_PASS            # name of the env var holding the password
+
 options:
   version_cutoff: null                        # e.g. "4.0" to ignore product changes before this version
   exclude_categories: [Announcements]         # categories to skip entirely

@@ -38,6 +38,14 @@ Start from `audit-config.example.yml` as the template and fill in only confirmed
    none), `version_cutoff` (default none), `freshness_aging_months` (6), `freshness_stale_months`
    (12), `dup_threshold` (0.4).
 
+7. **Reference site for screenshot checks** (optional). Ask: "Do you have a throwaway WordPress site I
+   can fully control — log into wp-admin, install/activate plugins, change settings — so I can compare
+   the current product UI against your KB screenshots? If so, give me the URL, the wp-admin username,
+   and the name of an env var holding the password." If yes, write a `reference_site` block (`url`,
+   `admin_user`, `admin_pass_env`); the site should run the same product version being audited. If no,
+   omit the block — Pass E still runs integrity + match-to-steps + code/changelog cue checks, just not
+   live-UI comparison. Never put the password in the YAML; use the env var.
+
 ## Generate, then confirm
 
 - Write the answers into `audit-config.yml`, preserving the example's structure and comments.
