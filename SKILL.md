@@ -1,6 +1,6 @@
 ---
 name: skb-audit
-description: Audits an internal Support Knowledge Base (WordPress export or live site) against GitHub repos + changelogs. Classifies articles by type, then checks accuracy, coverage gaps, findability, and support-readiness. Outputs an evidence-backed report, CSVs, a ranked new-article backlog, and an optional self-contained HTML report. Use to audit a team's support KB.
+description: Audits an internal Support Knowledge Base (WordPress export or live site) against GitHub repos + changelogs. Classifies articles by type, then checks accuracy, coverage gaps, findability, and support-readiness. Also checks screenshots against the live product UI. Outputs four deliverables (an interactive self-contained HTML report, a designed PDF, a full per-article CSV, and a ranked new-article-backlog CSV). Use to audit a team's support KB.
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch, Task, TodoWrite
 ---
 
@@ -55,8 +55,8 @@ Red flags — if you catch yourself thinking any of these, STOP and ask the user
 5. Agent-judgment passes A–D per `references/phases.md` + `references/rubric.md`. Write
    `audit/_internal/findings.json` per `references/report-spec.md`.
    Gate (anti-hallucination): every CRITICAL/HIGH cites evidence or is downgraded.
-6. Report: `python scripts/build_report.py --config audit-config.yml --findings audit/_internal/findings.json --out-dir audit/report` (add `--html` when a polished report is requested — see references/report-design.md).
-   Gate: report.md + dated CSV + backlog CSV exist; CSV has one row per audited article.
+6. Report: `python scripts/build_report.py --config audit-config.yml --findings audit/_internal/findings.json --out-dir audit/report` — always writes exactly four deliverables: an interactive `report.html`, a designed `report.pdf` (rendered from the HTML via Playwright; Node + Chromium auto-installed on first use), the dated per-article CSV, and `new-articles-backlog.csv`. See references/report-design.md. (No markdown report.)
+   Gate: report.html + report.pdf + dated CSV + backlog CSV exist; CSV has one row per audited article.
 
 ## Global rules
 Never compare operational/training/research articles against code. Type-aware thinness
