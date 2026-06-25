@@ -40,6 +40,26 @@ def test_html_is_self_contained(tmp_path):
     assert "TestTeam" in html
     assert "CRITICAL" in html
 
+def test_html_interactive_and_self_contained(tmp_path):
+    from build_report import write_html
+    findings = {"articles": [{"title": "Crit", "url": "u1", "type": "product",
+        "criticality": "CRITICAL", "effort": "Quick Fix", "freshness": "Stale",
+        "support_readiness": "Misleading", "accuracy_finding": "x", "evidence": "f.php:1",
+        "action": "fix", "screenshot_status": "Outdated", "screenshot_finding": "old",
+        "screenshot_evidence": "s.png"}], "backlog": []}
+    p = tmp_path / "report.html"
+    write_html(findings, {"team": "T"}, str(p))
+    h = open(p, encoding="utf-8").read()
+    assert "<style>" in h and "<script>" in h
+    assert "cdn" not in h.lower()
+    import re
+    assert not re.search(r'(href|src)\s*=\s*"https?://', h)   # no network refs in chrome
+    assert "@media print" in h
+    assert 'id="finding-search"' in h and "data-filter" in h and "data-sort" in h
+    assert "CRITICAL" in h and "#b91c1c" in h
+    assert "Outdated" in h            # screenshot finding surfaced
+    assert "—" not in h          # em-dash ban in chrome
+
 def test_csv_has_screenshot_columns(tmp_path):
     findings = {"articles": [{"title": "A", "url": "u", "type": "product",
         "criticality": "NONE", "effort": "Quick Fix", "screenshot_status": "Outdated",
