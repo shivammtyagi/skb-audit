@@ -40,6 +40,14 @@ def test_html_is_self_contained(tmp_path):
     assert "TestTeam" in html
     assert "CRITICAL" in html
 
+def test_print_pdf_script_exists():
+    import subprocess, os, shutil
+    p = os.path.join(os.path.dirname(__file__), "..", "scripts", "print_pdf.js")
+    assert os.path.exists(p)
+    if shutil.which("node"):
+        r = subprocess.run(["node", "--check", p], capture_output=True)
+        assert r.returncode == 0, r.stderr
+
 def test_html_interactive_and_self_contained(tmp_path):
     from build_report import write_html
     findings = {"articles": [{"title": "Crit", "url": "u1", "type": "product",
