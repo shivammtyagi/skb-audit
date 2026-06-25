@@ -55,15 +55,26 @@ Red flags — if you catch yourself thinking any of these, STOP and ask the user
 3. Repo signals: `python scripts/analyze_repo.py --config audit-config.yml --out-dir audit/_internal/signals`
    Gate: each mapped repo has a signals file.
 4. Deterministic analysis: `python scripts/analyze_content.py --config audit-config.yml --articles audit/_internal/articles.json --signals-dir audit/_internal/signals --out audit/_internal/findings-mechanical.json`
-5. Agent-judgment passes A–E per `references/phases.md` + `references/rubric.md`. Pass E
+   This also runs a deterministic secrets/credential scan; any article with a leaked secret
+   (`secret_findings`) is a CRITICAL the agent passes must carry through (Retire). Secret values
+   are stored redacted — never reproduce them in any deliverable.
+5. Agent-judgment passes A–E per `references/phases.md` + `references/rubric.md`.
+   **Pass A coverage is mandatory: review EVERY product/snippet article, not a candidate subset.**
+   First run `python scripts/make_review_batches.py --articles audit/_internal/articles.json --out-dir audit/_internal/review-batches`,
+   then dispatch one subagent per batch IN PARALLEL (mechanical cues are prioritization hints, not a
+   filter). Agents must check mechanism/architecture drift, not just version strings. Pass E
    (visual/screenshot accuracy) is always on and runs serially after A–D; it needs the
-   Playwright MCP, which is auto-installed when a `reference_site` is configured. Write
-   `audit/_internal/findings.json` per `references/report-spec.md`.
-   Gate (anti-hallucination): every CRITICAL/HIGH cites evidence or is downgraded.
+   Playwright MCP, which is auto-installed when a `reference_site` is configured. Run the
+   completeness critic, then write `audit/_internal/findings.json` per `references/report-spec.md`.
+   Gates (BOTH): (a) precision — every CRITICAL/HIGH cites evidence or is downgraded; (b) recall —
+   every product/snippet article has a verdict (audited count == #product + #snippet) and every
+   leaked-secret article is CRITICAL. A recall failure blocks the report.
 6. Report: `python scripts/build_report.py --config audit-config.yml --findings audit/_internal/findings.json --out-dir audit/report` — always writes exactly four deliverables: an interactive `report.html`, a designed `report.pdf` (rendered from the HTML via Playwright; Node + Chromium auto-installed on first use), the dated per-article CSV, and `new-articles-backlog.csv`. See references/report-design.md. (No markdown report.)
    Gate: report.html + report.pdf + dated CSV + backlog CSV exist; CSV has one row per audited article.
 
 ## Global rules
 Never compare operational/training/research articles against code. Type-aware thinness
 (training/research exempt). No SEO columns. Never truncate findings. Cite evidence or don't claim it.
+Coverage is not optional: review every product/snippet article, never just the mechanical candidates.
+Never reproduce a leaked secret/credential in any deliverable — cite the redacted descriptor only.
 Log failures to `audit/_internal/failures.md`.

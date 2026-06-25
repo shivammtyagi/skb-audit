@@ -9,6 +9,7 @@ from lib.config import load_config
 from lib.metrics import freshness, is_thin, support_readiness
 from lib.similarity import find_duplicates
 from lib.snippets import extract_symbols
+from lib.secrets import scan_article
 
 def _inbound_orphans(articles):
     """IDs with no INBOUND internal link from another article.
@@ -45,7 +46,11 @@ def analyze(articles, signals, cfg, now=None):
     now = now or datetime.now()
     orphan_ids = _inbound_orphans(articles)
     per_article = []
+    secret_findings = []
     for a in articles:
+        secrets = scan_article(a)
+        if secrets:
+            secret_findings.append({"id": a.id, "title": a.title, "url": a.url, "secrets": secrets})
         per_article.append({
             "id": a.id,
             "title": a.title,
@@ -56,10 +61,12 @@ def analyze(articles, signals, cfg, now=None):
             "is_thin": is_thin(a),
             "orphan": a.id in orphan_ids,
             "snippet_symbols": extract_symbols(a.code_blocks) if a.type == "snippet" else [],
+            "secrets": secrets,
         })
     orphans = [p["id"] for p in per_article if p["orphan"]]
     duplicates = find_duplicates(articles, threshold=cfg.get("options", {}).get("dup_threshold", 0.4))
-    return {"per_article": per_article, "orphans": orphans, "duplicates": duplicates}
+    return {"per_article": per_article, "orphans": orphans, "duplicates": duplicates,
+            "secret_findings": secret_findings}
 
 def main():
     ap = argparse.ArgumentParser()
@@ -78,8 +85,14 @@ def main():
     result = analyze(articles, signals, cfg)
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
+    n_secrets = len(result.get("secret_findings", []))
     print(f"Mechanical findings: {len(result['orphans'])} orphans, "
-          f"{len(result['duplicates'])} duplicate pairs")
+          f"{len(result['duplicates'])} duplicate pairs, "
+          f"{n_secrets} article(s) with leaked secrets (CRITICAL)")
+    if n_secrets:
+        for s in result["secret_findings"]:
+            kinds = ", ".join(sorted({x["kind"] for x in s["secrets"]}))
+            print(f"  !! SECRET in {s['id']} ({kinds}): {s['title'][:60]}")
 
 if __name__ == "__main__":
     main()
