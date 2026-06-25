@@ -23,3 +23,16 @@ def test_single_quoted_attrs():
 
 def test_no_images():
     assert extract_images(A("<p>no pics here</p>")) == []
+
+class Art:
+    def __init__(self, id, html):
+        self.id = id; self.title = "t" + id; self.type = "product"
+        self.url = "u" + id; self.body_html = html; self.body_text = ""
+
+def test_build_worklist_keeps_only_image_articles():
+    from extract_images import build_worklist
+    arts = [Art("1", '<p>step</p><img src="a.png">'), Art("2", "<p>none</p>")]
+    wl = build_worklist(arts)
+    assert len(wl) == 1
+    assert wl[0]["article_id"] == "1"
+    assert wl[0]["images"][0]["src"] == "a.png"
