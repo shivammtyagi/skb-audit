@@ -25,3 +25,8 @@ def _validate(cfg):
         raise ConfigError("content_source.taxonomies.category and .tag are required")
     if not cfg.get("products"):
         raise ConfigError("at least one product is required")
+    rs = cfg.get("reference_site")
+    if rs is not None:
+        if (not isinstance(rs, dict) or not rs.get("url") or not rs.get("admin_user")
+                or not (rs.get("admin_pass") or rs.get("admin_pass_env"))):
+            raise ConfigError("reference_site needs url, admin_user, and admin_pass or admin_pass_env")
