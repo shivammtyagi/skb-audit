@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 from lib.config import load_config
 from lib.ghsignals import rank_issue_demand, parse_changelog
 
@@ -60,6 +61,9 @@ def main():
             json.dump(sig, f, indent=2, ensure_ascii=False)
         print(f"Signals for {repo}: version={sig['version'] or 'n/a'}, "
               f"{len(sig['issue_demand'])} demand issues")
+        if not sig["version"] and not sig["recent_commits"] and not sig["issue_demand"]:
+            print(f"  WARNING: no signals returned for {repo} — check `gh auth status` and repo access.",
+                  file=sys.stderr)
 
 if __name__ == "__main__":
     main()

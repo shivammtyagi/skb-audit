@@ -1,6 +1,7 @@
 import argparse
 import re
 import xml.etree.ElementTree as ET
+from html import unescape as _unescape
 from urllib.parse import urlparse
 from lib.model import Article, save_articles
 from lib.config import load_config
@@ -29,25 +30,32 @@ def articles_from_wxr(xml_path, cfg):
             continue
         if _text(item, "wp:status") != "publish":
             continue
-        link = item.find("link").text or ""
+        link = _text(item, "link")
         host = urlparse(link).netloc or base_host
         html = _text(item, "content:encoded")
         text = re.sub(r"<[^>]+>", " ", html)
-        text = re.sub(r"\s+", " ", text).strip()
+        text = _unescape(re.sub(r"\s+", " ", text).strip())
         cats, tags = [], []
         for c in item.findall("category"):
+            if not c.text:
+                continue
             if c.get("domain") == cat_tax:
                 cats.append(c.text)
             elif c.get("domain") == tag_tax:
                 tags.append(c.text)
         links = re.findall(r'href="([^"]+)"', html)
-        internal = sum(1 for l in links if host and host in l or l.startswith("/"))
-        external = sum(1 for l in links if l.startswith("http") and (not host or host not in l))
+        internal = external = 0
+        for l in links:
+            net = urlparse(l).netloc
+            if (not net and l.startswith("/")) or (net and net == host):
+                internal += 1
+            elif net and net != host:
+                external += 1
         code_blocks = re.findall(r"<(?:pre|code)[^>]*>(.*?)</(?:pre|code)>", html, re.S)
         videos = re.findall(r"(youtube\.com/\S+|youtu\.be/\S+|vimeo\.com/\S+|<video)", html, re.I)
         out.append(Article(
             id=f"resource-{_text(item, 'wp:post_id')}",
-            title=(item.find("title").text or "").strip(),
+            title=_text(item, "title").strip(),
             url=link, slug=urlparse(link).path.strip("/").split("/")[-1],
             body_text=text, body_html=html, categories=cats, tags=tags,
             author=_text(item, "dc:creator"),

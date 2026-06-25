@@ -2,6 +2,7 @@ import argparse
 import os
 import re
 import urllib.request
+from html import unescape as _unescape
 from urllib.parse import urlparse
 from lib.model import Article, save_articles
 
@@ -16,10 +17,15 @@ def extract_article_from_html(html, url):
     body_html = body_match.group(1) if body_match else html
     text = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", body_html, flags=re.S | re.I)
     text = re.sub(r"<[^>]+>", " ", text)
-    text = re.sub(r"\s+", " ", text).strip()
+    text = _unescape(re.sub(r"\s+", " ", text).strip())
     links = re.findall(r'href="([^"]+)"', body_html)
-    internal = sum(1 for l in links if l.startswith("/") or (host and host in l))
-    external = sum(1 for l in links if l.startswith("http") and (not host or host not in l))
+    internal = external = 0
+    for l in links:
+        net = urlparse(l).netloc
+        if (not net and l.startswith("/")) or (net and net == host):
+            internal += 1
+        elif net and net != host:
+            external += 1
     # Change 2: attribute-order-independent modified date extraction
     modified = None
     for meta_tag in re.findall(r"<meta[^>]+>", html, re.I):

@@ -173,7 +173,7 @@ def _counts(findings):
 def _count_by(findings, key):
     c = {}
     for a in findings.get("articles", []):
-        k = a.get(key) or "—"
+        k = a.get(key) or "Unknown"
         c[k] = c.get(k, 0) + 1
     return c
 
@@ -244,7 +244,7 @@ def write_html(findings, cfg, path):
 
     qw = sorted([a for a in arts if a.get("criticality") in ("CRITICAL","HIGH") and a.get("effort") == "Quick Fix"], key=sort_key)
     qw_html = "".join(
-        f'<li><span class="badge" style="background:{sevc(a.get("criticality"))}">{a.get("criticality")}</span> '
+        f'<li><span class="badge" style="background:{sevc(a.get("criticality"))}">{_esc(a.get("criticality") or "")}</span> '
         f'{_esc(a.get("title",""))} <span class="muted">{_esc(_inline(a.get("action") or a.get("accuracy_finding") or ""))}</span></li>' for a in qw) or '<li class="muted">None.</li>'
 
     pt_rows = ""

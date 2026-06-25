@@ -25,6 +25,23 @@ def test_orphans_are_inbound():
     assert by_id["hub"]["freshness"] == "Fresh"
     assert by_id["hub"]["support_readiness"] in ("Resolve-ready", "Usable", "Thin")
 
+def test_orphans_resolved_by_full_path_not_slug():
+    # Two articles share the last path segment "setup" at different paths; a link to
+    # one must not mark the other as linked-to (no slug conflation).
+    hub = mk("hub", body_html='<p><a href="https://x/redirects/setup">go</a></p>')
+    rd = mk("rd"); rd.url = "https://x/redirects/setup"
+    sm = mk("sm"); sm.url = "https://x/sitemaps/setup"
+    result = analyze([hub, rd, sm], {}, CFG, now=datetime(2026, 6, 19))
+    assert "rd" not in result["orphans"]   # hub links to /redirects/setup
+    assert "sm" in result["orphans"]        # /sitemaps/setup has no inbound link
+
+def test_orphans_external_host_not_counted_internal():
+    # external host that merely contains the KB host as a substring is not internal
+    hub = mk("hub", body_html='<a href="https://x.evil.com/leaf">x</a>')
+    leaf = mk("leaf")  # url https://x/leaf ; host resolves to "x"
+    result = analyze([hub, leaf], {}, CFG, now=datetime(2026, 6, 19))
+    assert "leaf" in result["orphans"]      # the only link to it was external
+
 def test_snippet_symbols_collected():
     arts = [mk("s1", t="snippet", code=["add_filter('myplugin_x','cb');"])]
     result = analyze(arts, {}, CFG, now=datetime(2026, 6, 19))

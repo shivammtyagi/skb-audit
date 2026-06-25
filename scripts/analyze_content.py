@@ -13,27 +13,32 @@ from lib.snippets import extract_symbols
 def _inbound_orphans(articles):
     """IDs with no INBOUND internal link from another article.
 
-    Matches the rubric's "Orphaned" definition (no inbound internal links).
-    Builds a link graph from each article's body_html hrefs, resolving same-host
-    or root-relative links to a target article by the last URL-path segment (slug).
-    Note: this is distinct from outbound dead-ends (article.internal_links == 0).
+    Matches the rubric's "Orphaned" definition (no inbound internal links). Builds a
+    link graph from each article's body_html hrefs, resolving same-host or root-relative
+    links to a target article by its full normalized URL path (not just the last segment,
+    so articles that share a final path segment across sections are not conflated). A link
+    is internal only when its host matches the KB host exactly (not a substring). Distinct
+    from outbound dead-ends (article.internal_links == 0).
     """
-    slug_to_id = {}
+    def norm(u):
+        return (urlparse(u).path.rstrip("/") or "/") if u else ""
+    path_to_id = {}
     for a in articles:
-        if a.slug:
-            slug_to_id.setdefault(a.slug, a.id)
+        p = norm(a.url)
+        if p:
+            path_to_id.setdefault(p, a.id)
     hosts = [urlparse(a.url).netloc for a in articles if a.url]
     host = max(set(hosts), key=hosts.count) if hosts else ""
     linked_to = set()
     for a in articles:
         for href in re.findall(r'href="([^"]+)"', a.body_html or ""):
-            if href.startswith("#"):
+            pu = urlparse(href)
+            internal = (host and pu.netloc == host) or (not pu.netloc and href.startswith("/"))
+            if not internal:
                 continue
-            if (host and host in href) or href.startswith("/"):
-                segs = [s for s in urlparse(href).path.split("/") if s]
-                tid = slug_to_id.get(segs[-1]) if segs else None
-                if tid and tid != a.id:
-                    linked_to.add(tid)
+            tid = path_to_id.get(pu.path.rstrip("/") or "/")
+            if tid and tid != a.id:
+                linked_to.add(tid)
     return {a.id for a in articles if a.id not in linked_to}
 
 def analyze(articles, signals, cfg, now=None):

@@ -25,13 +25,13 @@ def is_thin(article):
     return article.word_count < THIN_THRESHOLDS.get(article.type, 150)
 
 def has_steps(article):
-    return bool(_STEP_RE.search(article.body_text)) or "<ol" in (article.body_html or "")
+    return bool(_STEP_RE.search(article.body_text or "")) or "<ol" in (article.body_html or "")
 
 def has_prerequisites(article):
-    return bool(_PREREQ_RE.search(article.body_text))
+    return bool(_PREREQ_RE.search(article.body_text or ""))
 
 def has_expected_outcome(article):
-    return bool(_OUTCOME_RE.search(article.body_text))
+    return bool(_OUTCOME_RE.search(article.body_text or ""))
 
 def support_readiness(article):
     if article.type in ("training", "research"):

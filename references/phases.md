@@ -5,7 +5,7 @@ into findings.json by performing these judgment passes, type-aware. NEVER compar
 operational/training/research articles against code.
 
 ## Pass A — Accuracy & lifecycle (product, snippet)
-- product: compare steps/settings/version references vs signals/<repo>.json (changelog,
+- product: compare steps/settings/version references vs signals/<owner>__<repo>.json (changelog,
   deprecations, recent_commits). Cite the file/commit/changelog line. Draft a correction
   for every CRITICAL.
 - product known-issue lifecycle: for articles tagged "known issues", check issue_demand and
