@@ -11,6 +11,11 @@ __pycache__/
 .venv/
 venv/
 
+# Node (Playwright is auto-installed at runtime for PDF rendering / Pass E)
+node_modules/
+package-lock.json
+package.json
+
 # OS / editors
 .DS_Store
 .vscode/
