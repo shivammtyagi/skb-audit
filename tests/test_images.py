@@ -24,6 +24,12 @@ def test_single_quoted_attrs():
 def test_no_images():
     assert extract_images(A("<p>no pics here</p>")) == []
 
+def test_lazyload_data_src_not_confused_with_src():
+    # WordPress lazy-loading: src is the real URL, data-src is a placeholder.
+    a = A('<img data-src="placeholder.gif" src="https://k/real.png" alt="x">')
+    imgs = extract_images(a)
+    assert imgs[0]["src"] == "https://k/real.png"
+
 class Art:
     def __init__(self, id, html):
         self.id = id; self.title = "t" + id; self.type = "product"

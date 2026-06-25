@@ -227,8 +227,8 @@ def write_html(findings, cfg, path):
         st = " ".join(str(a.get(k, "")) for k in ("title","accuracy_finding","evidence","action","screenshot_finding","category")).lower()
         short = _esc(_inline(a.get("accuracy_finding") or a.get("screenshot_finding") or ""))
         body_rows.append(
-            f'<tr class="frow" data-severity="{sev}" data-type="{_esc(t)}" data-freshness="{_esc(fr)}" data-text="{_esc(st)}">'
-            f'<td data-key="{_CRIT.get(sev,4)}"><span class="twist">&#9656;</span> <span class="badge" style="background:{sevc(sev)}">{sev}</span></td>'
+            f'<tr class="frow" data-severity="{_esc(sev)}" data-type="{_esc(t)}" data-freshness="{_esc(fr)}" data-text="{_esc(st)}">'
+            f'<td data-key="{_CRIT.get(sev,4)}"><span class="twist">&#9656;</span> <span class="badge" style="background:{sevc(sev)}">{_esc(sev)}</span></td>'
             f'<td>{_esc(a.get("title",""))}</td>'
             f'<td><span class="tag" style="color:{typc(t)};border-color:{typc(t)}">{_esc(t)}</span></td>'
             f'<td>{_esc(fr)}</td><td>{_esc(rd)}</td><td>{short}</td></tr>')
@@ -319,7 +319,7 @@ def _ensure_playwright():
     import shutil, subprocess
     if not shutil.which("node"):
         raise RuntimeError("Node.js is required to render the PDF (node not found). Install Node and re-run.")
-    has_pkg = subprocess.run(["node", "-e", "require.resolve('playwright')"], capture_output=True).returncode == 0
+    has_pkg = subprocess.run(["node", "-e", "require.resolve('playwright')"], capture_output=True, cwd=_SCRIPT_DIR).returncode == 0
     if not has_pkg:
         subprocess.run(["npm", "install", "--no-save", "playwright"], cwd=_SCRIPT_DIR, check=False)
     subprocess.run(["npx", "-y", "playwright", "install", "chromium"], check=False)
@@ -328,10 +328,15 @@ def _render_pdf(html_path, pdf_path):
     """Render report.html -> report.pdf via the Node Playwright print script (auto-installs if needed)."""
     import subprocess
     script = os.path.join(_SCRIPT_DIR, "print_pdf.js")
-    r = subprocess.run(["node", script, html_path, pdf_path], capture_output=True, text=True)
-    if r.returncode != 0 or not os.path.exists(pdf_path):
-        _ensure_playwright()
-        r = subprocess.run(["node", script, html_path, pdf_path], capture_output=True, text=True)
+    def _run():
+        return subprocess.run(["node", script, html_path, pdf_path], capture_output=True, text=True)
+    try:
+        r = _run()
+    except FileNotFoundError:
+        r = None  # `node` not on PATH
+    if r is None or r.returncode != 0 or not os.path.exists(pdf_path):
+        _ensure_playwright()   # raises a clear error if Node is missing, else installs playwright + chromium
+        r = _run()
     if r.returncode != 0 or not os.path.exists(pdf_path):
         raise RuntimeError("PDF generation failed. Ensure Node + Playwright Chromium are installed "
                            "(npx playwright install chromium).\n" + (r.stderr or ""))

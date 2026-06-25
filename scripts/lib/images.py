@@ -3,8 +3,9 @@ import re
 _IMG_RE = re.compile(r"<img\b[^>]*>", re.I)
 
 def _attr(tag, name):
-    m = (re.search(name + r'\s*=\s*"([^"]*)"', tag, re.I)
-         or re.search(name + r"\s*=\s*'([^']*)'", tag, re.I))
+    # (?<![\w-]) so `src` does not match inside `data-src` / `data-srcset` (lazy-loading)
+    m = (re.search(r'(?<![\w-])' + name + r'\s*=\s*"([^"]*)"', tag, re.I)
+         or re.search(r"(?<![\w-])" + name + r"\s*=\s*'([^']*)'", tag, re.I))
     return m.group(1) if m else ""
 
 def extract_images(article):
