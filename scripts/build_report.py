@@ -6,7 +6,8 @@ CSV_COLUMNS = [
     "Title", "URL", "Type", "Product/Repo", "Category", "Tags", "Author",
     "Last Modified", "Freshness", "Word Count", "Support-Readiness", "Findability",
     "Accuracy Finding", "Evidence", "Duplicate-Of", "Known-Issue Status",
-    "Has Steps", "Has Visuals", "Internal Links", "Criticality", "Effort",
+    "Has Steps", "Has Visuals", "Screenshot Status", "Screenshot Finding",
+    "Screenshot Evidence", "Internal Links", "Criticality", "Effort",
     "Recommendation", "Action Required", "Assigned To", "Status",
 ]
 _CRIT = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "NONE": 4}
@@ -24,6 +25,8 @@ _FIELD_MAP = {
     "Accuracy Finding": "accuracy_finding", "Evidence": "evidence",
     "Duplicate-Of": "duplicate_of", "Known-Issue Status": "known_issue_status",
     "Has Steps": "has_steps", "Has Visuals": "has_visuals",
+    "Screenshot Status": "screenshot_status", "Screenshot Finding": "screenshot_finding",
+    "Screenshot Evidence": "screenshot_evidence",
     "Internal Links": "internal_links", "Criticality": "criticality",
     "Effort": "effort", "Recommendation": "recommendation",
     "Action Required": "action", "Assigned To": "assigned_to", "Status": "status",

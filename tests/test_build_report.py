@@ -40,6 +40,19 @@ def test_html_is_self_contained(tmp_path):
     assert "TestTeam" in html
     assert "CRITICAL" in html
 
+def test_csv_has_screenshot_columns(tmp_path):
+    findings = {"articles": [{"title": "A", "url": "u", "type": "product",
+        "criticality": "NONE", "effort": "Quick Fix", "screenshot_status": "Outdated",
+        "screenshot_finding": "old menu", "screenshot_evidence": "shot.png"}], "backlog": []}
+    p = tmp_path / "o.csv"
+    write_csv(findings, str(p))
+    import csv as _csv
+    row = next(_csv.DictReader(open(p, encoding="utf-8-sig")))
+    assert row["Screenshot Status"] == "Outdated"
+    assert row["Screenshot Evidence"] == "shot.png"
+    for banned in ("Focus Keyword", "Meta Description"):
+        assert banned not in ",".join(CSV_COLUMNS)
+
 def test_markdown_has_spec_sections(tmp_path):
     from build_report import write_markdown
     findings = {"articles": [
