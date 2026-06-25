@@ -39,6 +39,9 @@ Red flags — if you catch yourself thinking any of these, STOP and ask the user
 1. `pip install -r requirements.txt`
 2. `gh auth status` (must be logged in for repo signals).
 3. Create `audit/`, `audit/_internal/`, `audit/_internal/signals/`, `audit/report/`.
+4. Node.js is required for the PDF report (and Pass E live capture). The build auto-installs the
+   `playwright` package + Chromium on first use; when a `reference_site` is configured, Pass E also
+   auto-installs the Playwright MCP. (`node_modules` is gitignored.)
 
 ## Phases (run in order; gate between each — see references/phases.md)
 0. Preflight: ensure `audit-config.yml` exists — build it *with the user* if missing (see "Config" above; never auto-discover). Validate it (`lib/config`); confirm source reachable.
@@ -52,7 +55,9 @@ Red flags — if you catch yourself thinking any of these, STOP and ask the user
 3. Repo signals: `python scripts/analyze_repo.py --config audit-config.yml --out-dir audit/_internal/signals`
    Gate: each mapped repo has a signals file.
 4. Deterministic analysis: `python scripts/analyze_content.py --config audit-config.yml --articles audit/_internal/articles.json --signals-dir audit/_internal/signals --out audit/_internal/findings-mechanical.json`
-5. Agent-judgment passes A–D per `references/phases.md` + `references/rubric.md`. Write
+5. Agent-judgment passes A–E per `references/phases.md` + `references/rubric.md`. Pass E
+   (visual/screenshot accuracy) is always on and runs serially after A–D; it needs the
+   Playwright MCP, which is auto-installed when a `reference_site` is configured. Write
    `audit/_internal/findings.json` per `references/report-spec.md`.
    Gate (anti-hallucination): every CRITICAL/HIGH cites evidence or is downgraded.
 6. Report: `python scripts/build_report.py --config audit-config.yml --findings audit/_internal/findings.json --out-dir audit/report` — always writes exactly four deliverables: an interactive `report.html`, a designed `report.pdf` (rendered from the HTML via Playwright; Node + Chromium auto-installed on first use), the dated per-article CSV, and `new-articles-backlog.csv`. See references/report-design.md. (No markdown report.)
