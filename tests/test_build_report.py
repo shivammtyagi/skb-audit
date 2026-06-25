@@ -81,28 +81,25 @@ def test_csv_has_screenshot_columns(tmp_path):
     for banned in ("Focus Keyword", "Meta Description"):
         assert banned not in ",".join(CSV_COLUMNS)
 
-def test_markdown_has_spec_sections(tmp_path):
-    from build_report import write_markdown
-    findings = {"articles": [
-        {"title": "Crit One", "url": "u1", "type": "product", "repo": "o/r",
-         "criticality": "CRITICAL", "effort": "Quick Fix", "freshness": "Stale",
-         "support_readiness": "Misleading", "accuracy_finding": "wrong",
-         "evidence": "x.php:1", "action": "fix it", "recommendation": "Update"},
-        {"title": "Fine Doc", "url": "u2", "type": "operational", "criticality": "NONE",
-         "effort": "Quick Fix", "freshness": "Fresh", "support_readiness": "Usable"},
-    ], "backlog": [
-        {"title": "New Doc", "type": "product", "demand": "many", "source": "issue #9",
-         "outline": "o", "priority": "High"}]}
-    p = tmp_path / "report.md"
-    write_markdown(findings, {"team": "T"}, str(p))
-    md = open(p, encoding="utf-8").read()
-    for section in ["# SKB Audit Report — T", "## Executive Summary", "## Quick Wins",
-                    "## Findings", "## Per-Type Breakdown", "## New-Article Backlog",
-                    "## Methodology"]:
-        assert section in md, f"missing section: {section}"
-    assert "By freshness:" in md and "By support-readiness:" in md
-    assert "Crit One" in md and "New Doc" in md         # finding + backlog listed
-    assert "#### Fine Doc" not in md                    # NONE articles not listed individually
+def test_main_outputs_no_markdown(tmp_path, monkeypatch):
+    import build_report, json, os
+    # stub the PDF render so the test needs no Node/Playwright
+    monkeypatch.setattr(build_report, "_render_pdf", lambda h, p: open(p, "w").write("%PDF-1.4 stub"))
+    findings = {"articles": [{"title": "A", "url": "u", "type": "product",
+        "criticality": "NONE", "effort": "Quick Fix"}], "backlog": []}
+    fp = tmp_path / "f.json"
+    json.dump(findings, open(fp, "w"))
+    cfgp = tmp_path / "c.yml"
+    open(cfgp, "w").write(
+        "team: T\ncontent_source:\n  wxr_export: x\n  post_types: [r]\n"
+        "  taxonomies: {category: c, tag: t}\nproducts:\n"
+        "  - {name: P, repo: o/r, match: {categories: ['*']}}\n")
+    out = tmp_path / "report"
+    build_report.main_with_args(str(cfgp), str(fp), str(out), date="2026-06-25")
+    files = set(os.listdir(out))
+    assert "report.html" in files and "report.pdf" in files
+    assert "skb-audit-2026-06-25.csv" in files and "new-articles-backlog.csv" in files
+    assert "report.md" not in files
 
 def test_backlog_csv(tmp_path):
     from build_report import write_backlog_csv
